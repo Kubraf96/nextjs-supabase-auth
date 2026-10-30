@@ -1,7 +1,13 @@
-
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+export const metadata = {
+  title: "Sign up",
+};
+
+// A Server Action: "use server" makes it run on the server,
+// even though the form in the browser calls it
 async function signUp(formData) {
   "use server";
 
@@ -9,18 +15,28 @@ async function signUp(formData) {
   const password = formData.get("password");
 
   const supabase = await createClient();
-  await supabase.auth.signUp({ email, password });
+  const { error } = await supabase.auth.signUp({ email, password });
+
+  // Something went wrong: back to the form with ?error=true in the URL
+  if (error) {
+    redirect("/signup?error=true");
+  }
 
   redirect("/");
 }
-export const metadata = {
-  title: "Sign up",
-};
 
-export default function SignUpPage() {
+export default async function SignUpPage({ searchParams }) {
+  // ?error=true is set by signUp when Supabase says no
+  const { error } = await searchParams;
+
   return (
     <main>
       <h1>Sign up</h1>
+      {error && (
+        <p className="form-error" role="alert">
+          Could not sign up. Maybe the email is already in use.
+        </p>
+      )}
       <form action={signUp} className="auth-form">
         <label htmlFor="email">Email</label>
         <input
@@ -45,6 +61,9 @@ export default function SignUpPage() {
 
         <button type="submit">Sign up</button>
       </form>
+      <p>
+        Already have an account? <Link href="/login">Log in</Link>
+      </p>
     </main>
   );
 }
